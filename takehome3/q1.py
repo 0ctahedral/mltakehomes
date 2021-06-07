@@ -165,41 +165,117 @@ def splitData(data, labels, nFolds):
 
 train, trainLabels, test, testLabels = writeData()
 
-trainSplits = {}
-nFolds = 5
-# generate splits for each dataset
-for k in train.keys():
-    trainSplits[k] = splitData(train[k], trainLabels[k], nFolds)
+def findBestPerceptrons():
+    nFolds = 5
+    # keep track of what is performing best for the model
+    modelStats = {}
+    trainSplits = {}
 
-# k fold time!
-k = 100
-i = 0
-#for i in range(nFolds):
-#for i in range(0):
-# take the ith for tests
-fdata, flabels = trainSplits[k]
-# use the rest for training by concatenating
-ftest = np.asarray(fdata.pop(i)).T
-ftestLabels = np.asarray(flabels.pop(i))
+    # loop over training sets
+    for k in train.keys():
+        # add spots for stats for this training set
+        modelStats[k] = {}
+        modelStats[k]["perr"] = []
 
-ftrain = np.asarray(fdata).T.reshape(d, (nFolds-1)*ftest.shape[1])
-ftrainLabels = np.asarray(flabels).reshape((nFolds-1)*ftest.shape[1])
-# TODO for loop for number of nodes that we kfold
-nodes = 2
-# build a neural net
-model = keras.Sequential(
-        [
-            layers.Dense(units = nodes, activation='elu', kernel_initializer = 'random_uniform', input_dim = d, name = 'hidden'),
-            layers.Dense(units = 3, activation='softmax', kernel_initializer = 'random_uniform', name = 'soft')
-        ]
-)
+        print(f"\nset: {k}\n")
+        # k fold time!
+        for i in range(nFolds):
+            fdata, flabels = splitData(train[k], trainLabels[k], nFolds)
+            # stats for p = i perceptrons
+            # take the ith for tests
+            ftest = np.asarray(fdata.pop(i)).T
+            ftestLabels = np.asarray(flabels.pop(i))
+            # use the rest for training by concatenating
+            ftrain = np.asarray(fdata).T.reshape(d, (nFolds-1)*ftest.shape[1])
+            ftrainLabels = np.asarray(flabels).reshape((nFolds-1)*ftest.shape[1])
 
-model.compile(optimizer = 'SGD', loss = 'categorical_crossentropy', metrics = ['accuracy'])
-model.fit(ftrain.T, ml.repmat(ftrainLabels, 3, 1).T, batch_size = 10, epochs = 100, verbose=0)
-model.summary()
+            # build a neural net
+            model = keras.Sequential(
+                    [
+                        layers.Dense(units = i + 1, activation='elu', kernel_initializer = 'random_uniform', input_dim = d, name = 'hidden'),
+                        layers.Dense(units = 3, activation='softmax', kernel_initializer = 'random_uniform', name = 'soft')
+                    ]
+            )
 
-decisions = model.predict(ftest.T)
-#pErr = np.not_equal(decisions, ftestLabels).nonzero()[0].size/ftestLabels.size
-#print(pErr)
+            model.compile(optimizer = 'SGD', loss = 'categorical_crossentropy', metrics = ['accuracy'])
+            model.fit(ftrain.T, ml.repmat(ftrainLabels, 3, 1).T, batch_size = 10, epochs = 100, verbose=0)
 
-#decisions, optimalPerr = optimalClassifier(test, testLabels)
+            decisions = np.argmax(model.predict(ftest.T), axis=1)
+
+            modelStats[k]["perr"].append(np.not_equal(decisions, ftestLabels).nonzero()[0].size/ftestLabels.size)
+            modelStats[k]["best"] = np.array(modelStats[k]["perr"]).argmin() + 1
+
+    return modelStats
+
+def trainModels(modelStats):
+    """with model stats, train models again with the proper number of perceptrons"""
+    models = {}
+    for k in modelStats.keys():
+        print(f"training model {k}")
+        models[k] = keras.Sequential(
+                [
+                    layers.Dense(units = modelStats[k]['best'], activation='elu', kernel_initializer = 'random_uniform', input_dim = d, name = 'hidden'),
+                    layers.Dense(units = 3, activation='softmax', kernel_initializer = 'random_uniform', name = 'soft')
+                ]
+        )
+        models[k].compile(optimizer = 'adam', loss = 'categorical_crossentropy', metrics = ['accuracy'])
+        models[k].fit(train[k].T, ml.repmat(trainLabels[k], 3, 1).T, batch_size = 10, epochs = 100, verbose=0)
+
+    return models
+
+def applyModels(models):
+    decisions = {}
+    for k in models.keys():
+        print(f"applying model {k}")
+        decisions[k] = np.argmax(models[k].predict(test.T), axis=1)
+
+    return decisions
+
+
+ms = findBestPerceptrons()
+
+models = trainModels(ms)
+decisions = applyModels(models)
+_, optimalPerr = optimalClassifier(test, testLabels)
+
+def plotModelOrder():
+    # use model stats to compare them
+    # number of perceptrons vs score
+    modelOrderFig = plt.figure()
+    compare = modelOrderFig.add_subplot()
+    # where each bar is on the graph
+    width = 0.1
+    colors = 'rgbmck'
+    for i in range(len(ms.keys())):
+        positions = [
+                -0.25 + i * width,
+                0.75 + i * width,
+                1.75 + i * width,
+                2.75 + i * width,
+                3.75 + i * width
+                ]
+        compare.bar(positions, np.asarray(ms[list(ms.keys())[i]]['perr']), width, color=colors[i], label=list(ms.keys())[i])
+
+    compare.set_xticklabels([0, 1, 2, 3, 4, 5])
+    compare.set_xlabel("Number of Perceptrons")
+    compare.set_ylabel("P(error)")
+    compare.legend(loc='best')
+    plt.show()
+
+def plotTrained():
+    # get perror for all decisions
+    fig = plt.figure()
+    compare = fig.add_subplot()
+    perr = np.zeros(7)
+    perr[6] = optimalPerr
+    for i in range(len(decisions.keys())):
+        perr[i] = np.not_equal(decisions[list(decisions.keys())[i]], testLabels).nonzero()[0].size/testLabels.size
+
+    compare.bar([0, 1, 2, 3, 4, 5, 6], perr)
+    names = list(decisions.keys())
+    names.append("optimal")
+    compare.set_xticklabels(names)
+
+
+# compare them all
+    #compare.bar(positions + i*width, np.asarray(ms[list(ms.keys())[i]]['perr']), width, color=colors[i])
