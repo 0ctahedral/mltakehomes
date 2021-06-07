@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import numpy.matlib as ml
 
 # cube from https://stackoverflow.com/questions/52229300/creating-numpy-array-with-coordinates-of-vertices-of-n-dimensional-cube
 cube = 2*((np.arange(2**3)[:,None] & (1 << np.arange(3))) > 0) - 1
@@ -28,6 +29,16 @@ covs = np.array(
             
         ]
 )
+
+def evalGaussianPDF(x, mu, Sigma):
+    N = x[1].size # number of items in x
+    # normalization constant (const with respect to x)
+    C = (2*np.pi)**(-2/2)*np.linalg.det(Sigma)**(1/2)
+    #E = -0.5 * np.sum((x-ml.repmat(mu,1,N)).T * (np.linagl.inv(Sigma)* (x-ml.repmat(mu,1,N))),1)
+    like = np.zeros(N)
+    for i in range(N):
+        like[i]  = C * np.exp(-0.5 * np.sum(((x[:, i]-mu).T * np.linalg.inv(Sigma)) * (x[:, i]-mu)))
+    return like
 
 def dataFromGMM(N, priors, means, covs):
     components = priors.size
@@ -97,8 +108,22 @@ def writeData():
 def loadData():
     pass
 
+def optimalClassifier(x, labels):
+    N = x.shape[1]
+    pxgivenl = np.zeros((C, N))
+    priors = np.array([[0.25, 0.25, 0.25, 0.25]])
+
+    for l in range(C):
+        pxgivenl[l,:] = 0.5 * evalGaussianPDF(x,means[l][0], covs[l][0]) + 0.5 * evalGaussianPDF(x,means[l][1], covs[l][1]) 
+
+    px = (priors * pxgivenl[:].T).T.sum(axis=0)
+    classPosteriors = pxgivenl * ml.repmat(priors.T, 1, N) / ml.repmat(px, C, 1)
+    expectedRisks = np.matmul(np.ones(C)-np.eye(C), classPosteriors)
+
+    decisions = np.argmin(expectedRisks, axis=0)
+    pErr = np.not_equal(decisions, testLabels).nonzero()[0].size/testLabels.size
+
+    return decisions, pErr
+
 train, trainLabels, test, testLabels = writeData()
-fig = plt.figure()
-ax = fig.add_subplot(projection='3d')
-ax.scatter(train[2000][0], train[2000][1], train[2000][2], c=trainLabels[2000])
-plt.show()
+#decisions, optimalPerr = optimalClassifier(test, testLabels)
