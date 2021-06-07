@@ -1,9 +1,15 @@
+import tensorflow as tf
+from tensorflow import keras
+from tensorflow.keras import layers
 import matplotlib.pyplot as plt
 import numpy as np
 import numpy.matlib as ml
+from random import randrange, seed
 
 # cube from https://stackoverflow.com/questions/52229300/creating-numpy-array-with-coordinates-of-vertices-of-n-dimensional-cube
 cube = 2*((np.arange(2**3)[:,None] & (1 << np.arange(3))) > 0) - 1
+
+seed(123)
 
 # generate data
 # four classes
@@ -90,7 +96,7 @@ def genData(N):
     return x, labels
 
 def writeData():
-    """Generate datasets and write them to files"""
+    """Generates datasets required for training and testing"""
     # sets
     train = {}
     trainLabels = {}
@@ -107,8 +113,10 @@ def writeData():
 
 def loadData():
     pass
+    #return train, trainLabels, test, testLabels
 
 def optimalClassifier(x, labels):
+    """Creates an optimal classifier using minimum expected risk and 0-1 loss, returns the decisions, and p(error)"""
     N = x.shape[1]
     pxgivenl = np.zeros((C, N))
     priors = np.array([[0.25, 0.25, 0.25, 0.25]])
@@ -125,5 +133,73 @@ def optimalClassifier(x, labels):
 
     return decisions, pErr
 
+def splitData(data, labels, nFolds):
+    """splits the given dataset into the number of folds required, with the label as the first array"""
+
+    # combine to make easier
+    dset = list(data.T)
+    ll = list(labels)
+    # size of each split
+    fsize = int(len(dset)/nFolds)
+
+    # list of list of values
+    splits = []
+    slabels = []
+
+    # segment by taking randomly from the dset and poping them
+    for i in range(nFolds):
+        fold = []
+        flabels = []
+        while len(fold) < fsize:
+            # random index
+            idx = randrange(len(dset))
+            # apend to fold
+            fold.append(dset.pop(idx))
+            flabels.append(ll.pop(idx))
+        # append fold to splits
+        splits.append(fold)
+        slabels.append(flabels)
+
+    # return as separate lists again
+    return splits, slabels
+
 train, trainLabels, test, testLabels = writeData()
+
+trainSplits = {}
+nFolds = 5
+# generate splits for each dataset
+for k in train.keys():
+    trainSplits[k] = splitData(train[k], trainLabels[k], nFolds)
+
+# k fold time!
+k = 100
+i = 0
+#for i in range(nFolds):
+#for i in range(0):
+# take the ith for tests
+fdata, flabels = trainSplits[k]
+# use the rest for training by concatenating
+ftest = np.asarray(fdata.pop(i)).T
+ftestLabels = np.asarray(flabels.pop(i))
+
+ftrain = np.asarray(fdata).T.reshape(d, (nFolds-1)*ftest.shape[1])
+ftrainLabels = np.asarray(flabels).reshape((nFolds-1)*ftest.shape[1])
+# TODO for loop for number of nodes that we kfold
+nodes = 2
+# build a neural net
+model = keras.Sequential(
+        [
+            layers.Dense(units = nodes, activation='elu', kernel_initializer = 'random_uniform', input_dim = d, name = 'hidden'),
+            layers.Dense(units = 3, activation='softmax', kernel_initializer = 'random_uniform', name = 'soft')
+        ]
+)
+
+model.compile(optimizer = 'SGD', loss = 'categorical_crossentropy', metrics = ['accuracy'])
+model.fit(ftrain.T, ml.repmat(ftrainLabels, 3, 1).T, batch_size = 10, epochs = 100, verbose=0)
+model.summary()
+
+decisions = model.predict(ftest.T)
+#pErr = np.not_equal(decisions, ftestLabels).nonzero()[0].size/ftestLabels.size
+#print(pErr)
+
 #decisions, optimalPerr = optimalClassifier(test, testLabels)
