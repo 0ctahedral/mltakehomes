@@ -78,10 +78,27 @@ def genData(N):
 
     return x, labels
 
+def writeData():
+    """Generate datasets and write them to files"""
+    # sets
+    train = {}
+    trainLabels = {}
+    train[100],  trainLabels[100] = genData(100)
+    train[200],  trainLabels[200] = genData(200)
+    train[500],  trainLabels[500] = genData(500)
+    train[1000], trainLabels[1000]= genData(1000)
+    train[2000], trainLabels[2000]= genData(2000)
+    train[5000], trainLabels[5000]= genData(5000)
+    test, testLabels = genData(100000)
+    #dataset = np.c_[labels, x.T]
+    #numpy.savetxt("500.csv", dataset, delimiter=",")
+    return train, trainLabels, test, testLabels
 
-x, labels = genData(1000)
+def loadData():
+    pass
+
+train, trainLabels, test, testLabels = writeData()
 fig = plt.figure()
 ax = fig.add_subplot(projection='3d')
-ax.scatter(x[0], x[1], x[2], c=labels)
-
+ax.scatter(train[2000][0], train[2000][1], train[2000][2], c=trainLabels[2000])
 plt.show()
