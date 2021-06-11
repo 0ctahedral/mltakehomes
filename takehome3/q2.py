@@ -69,7 +69,7 @@ def readAll(P):
     return ret
 
 #createData(100, range(2,7))
-allData = readAll(range(2,7))
+#allData = readAll(range(2,7))
 
 def evalGaussianPDF(x, mu, Sigma):
     N = x[1].size # number of items in x
@@ -169,11 +169,50 @@ def kfold_sub(X):
         scores.append(sum(subscores)/K)
     return scores
 
+# time to plot
+def plot():
+    kfoldResults = {}
+    bicResults = {}
+    mins =  {}
+    mins['kfold'] = []
+    mins['bic'] = []
+    maxs =  {}
+    maxs['kfold'] = []
+    maxs['bic'] = []
+    means =  {}
+    means['kfold'] = []
+    means['bic'] = []
+    # collect results
+    for p in range(2,6):
+        i = 10**p
+        # get maximum
+        kfoldResults[i] = np.argmax(np.loadtxt(f"results/kfold{i}.csv", delimiter=' '), axis=1) + 1
+        mins["kfold"].append(np.min(kfoldResults[i]))
+        maxs["kfold"].append(np.max(kfoldResults[i]))
+        means["kfold"].append(np.mean(kfoldResults[i]))
 
-for p in range(3,7):
-    i = 10**p
-    print(f"kfold for {i}")
-    np.savetxt(f"results/kfold{i}.csv", np.asarray(kfold(allData[i], 10, 5)))
+        bicResults[i] = np.loadtxt(f"results/kfold{i}.csv", delimiter=' ')
+        # change all negative inf to zero
+        bicResults[i][bicResults[i] == -np.inf] = 0
+        # get minimum
+        bicResults[i] = np.argmin(bicResults[i], axis=1) + 1
+        mins["bic"].append(np.min(bicResults[i]))
+        maxs["bic"].append(np.max(bicResults[i]))
+        means["bic"].append(np.mean(bicResults[i]))
+
+    # min median max M for group of N samples
+    fig, plots = plt.subplots(1,1)
+    plots.set_title("Mean M for each N samples")
+    plots.plot(list(bicResults.keys()), means["bic"], label='bic')
+    plots.plot(list(kfoldResults.keys()), means["kfold"], label='kfold')
+    plots.legend(loc='best')
+    
+    plt.show()
+plot()
+#for p in range(3,7):
+#    i = 10**p
+#    print(f"kfold for {i}")
+#    np.savetxt(f"results/kfold{i}.csv", np.asarray(kfold(allData[i], 10, 5)))
 
 #for p in range(2,7):
 #    i = 10**p

@@ -23,8 +23,8 @@ means = np.array(
             [cube[3], cube[5]], # class 1
             [cube[4], cube[2]], # class 2
             [cube[6], cube[7]], # class 3
-        ]
-)
+            ]
+        )
 
 covs = np.array(
         [
@@ -32,9 +32,9 @@ covs = np.array(
             [0.8 * np.eye(3), 0.67 * np.eye(3)], # class 1
             [0.6 * np.eye(3), 0.72 * np.eye(3)], # class 2
             [0.7 * np.eye(3), 0.81 * np.eye(3)], # class 3
-            
-        ]
-)
+
+            ]
+        )
 
 def evalGaussianPDF(x, mu, Sigma):
     N = x[1].size # number of items in x
@@ -113,7 +113,7 @@ def writeData():
 
 def loadData():
     pass
-    #return train, trainLabels, test, testLabels
+#return train, trainLabels, test, testLabels
 
 def optimalClassifier(x, labels):
     """Creates an optimal classifier using minimum expected risk and 0-1 loss, returns the decisions, and p(error)"""
@@ -194,8 +194,8 @@ def findBestPerceptrons():
                     [
                         layers.Dense(units = i + 1, activation='elu', kernel_initializer = 'random_uniform', input_dim = d, name = 'hidden'),
                         layers.Dense(units = 3, activation='softmax', kernel_initializer = 'random_uniform', name = 'soft')
-                    ]
-            )
+                        ]
+                    )
 
             model.compile(optimizer = 'SGD', loss = 'categorical_crossentropy', metrics = ['accuracy'])
             model.fit(ftrain.T, ml.repmat(ftrainLabels, 3, 1).T, batch_size = 10, epochs = 100, verbose=0)
@@ -216,8 +216,8 @@ def trainModels(modelStats):
                 [
                     layers.Dense(units = modelStats[k]['best'], activation='elu', kernel_initializer = 'random_uniform', input_dim = d, name = 'hidden'),
                     layers.Dense(units = 3, activation='softmax', kernel_initializer = 'random_uniform', name = 'soft')
-                ]
-        )
+                    ]
+                )
         models[k].compile(optimizer = 'adam', loss = 'categorical_crossentropy', metrics = ['accuracy'])
         models[k].fit(train[k].T, ml.repmat(trainLabels[k], 3, 1).T, batch_size = 10, epochs = 100, verbose=0)
 
@@ -255,7 +255,7 @@ def plotModelOrder():
                 3.75 + i * width
                 ]
         compare.bar(positions, np.asarray(ms[list(ms.keys())[i]]['perr']), width, color=colors[i], label=list(ms.keys())[i])
-
+    compare.set_title("Number of Perceptrons vs P(error)")
     compare.set_xticklabels([0, 1, 2, 3, 4, 5])
     compare.set_xlabel("Number of Perceptrons")
     compare.set_ylabel("P(error)")
@@ -270,12 +270,41 @@ def plotTrained():
     perr[6] = optimalPerr
     for i in range(len(decisions.keys())):
         perr[i] = np.not_equal(decisions[list(decisions.keys())[i]], testLabels).nonzero()[0].size/testLabels.size
-
     compare.bar([0, 1, 2, 3, 4, 5, 6], perr)
-    names = list(decisions.keys())
-    names.append("optimal")
-    compare.set_xticklabels(names)
+    compare.set_title("Number of Samples vs P(error)")
+    compare.set_xticks([0, 1, 2, 3, 4, 5, 6])
+    compare.set_xticklabels([ 100, 200, 500, 1000, 2000, 5000, "optimal" ])
+    compare.set_xlabel("Number of Samples in Dataset")
+    compare.set_ylabel("P(error)")
+    plt.show()
 
 
 # compare them all
-    #compare.bar(positions + i*width, np.asarray(ms[list(ms.keys())[i]]['perr']), width, color=colors[i])
+#compare.bar(positions + i*width, np.asarray(ms[list(ms.keys())[i]]['perr']), width, color=colors[i])
+
+def plotModelOrder():
+    # use model stats to compare them
+    # number of perceptrons vs score
+    modelOrderFig = plt.figure()
+    compare = modelOrderFig.add_subplot()
+    # where each bar is on the graph
+    width = 0.1
+    colors = 'rgbmck'
+    for i in range(len(ms.keys())):
+        positions = [
+                -0.25 + i * width,
+                0.75 + i * width,
+                1.75 + i * width,
+                2.75 + i * width,
+                3.75 + i * width
+                ]
+        compare.bar(positions, np.asarray(ms[list(ms.keys())[i]]['perr']), width, color=colors[i], label=list(ms.keys())[i])
+
+    compare.set_title("Number of Perceptrons vs P(error)")
+    compare.set_xticklabels([0, 1, 2, 3, 4, 5])
+    compare.set_xlabel("Number of Perceptrons")
+    compare.set_ylabel("P(error)")
+    compare.legend(loc='best')
+    plt.show()
+
+plotModelOrder()
