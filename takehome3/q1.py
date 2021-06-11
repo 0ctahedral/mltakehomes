@@ -111,9 +111,6 @@ def writeData():
     #numpy.savetxt("500.csv", dataset, delimiter=",")
     return train, trainLabels, test, testLabels
 
-def loadData():
-    pass
-#return train, trainLabels, test, testLabels
 
 def optimalClassifier(x, labels):
     """Creates an optimal classifier using minimum expected risk and 0-1 loss, returns the decisions, and p(error)"""
