@@ -182,6 +182,10 @@ def plot():
     means =  {}
     means['kfold'] = []
     means['bic'] = []
+    per = {}
+    per['bic'] = np.zeros((6,5))
+    per['kfold'] = np.zeros((6,5))
+    percentiles = [10, 25, 50, 75, 90]
     # collect results
     for p in range(2,6):
         i = 10**p
@@ -190,6 +194,7 @@ def plot():
         mins["kfold"].append(np.min(kfoldResults[i]))
         maxs["kfold"].append(np.max(kfoldResults[i]))
         means["kfold"].append(np.mean(kfoldResults[i]))
+        per["kfold"][p,:] = np.percentile(kfoldResults[i], [10, 25, 50, 75, 90])
 
         bicResults[i] = np.loadtxt(f"results/kfold{i}.csv", delimiter=' ')
         # change all negative inf to zero
@@ -199,13 +204,23 @@ def plot():
         mins["bic"].append(np.min(bicResults[i]))
         maxs["bic"].append(np.max(bicResults[i]))
         means["bic"].append(np.mean(bicResults[i]))
+        per["bic"][p,:] = np.percentile(bicResults[i], percentiles)
 
     # min median max M for group of N samples
-    fig, plots = plt.subplots(1,1)
-    plots.set_title("Mean M for each N samples")
-    plots.plot(list(bicResults.keys()), means["bic"], label='bic')
-    plots.plot(list(kfoldResults.keys()), means["kfold"], label='kfold')
-    plots.legend(loc='best')
+    bicfig, bicplots = plt.subplots(1,1)
+    bicplots.set_title("Percential and mean M for each N samples in BIC")
+    bicplots.plot(list(bicResults.keys()), means["bic"], label='mean')
+
+    kfoldfig, kfoldplots = plt.subplots(1,1)
+    kfoldplots.set_title("Percential and mean M for each N samples in kfold")
+    kfoldplots.plot(list(kfoldResults.keys()), means["kfold"], label='mean')
+
+    for i in range(len(percentiles)):
+        bicplots.plot(list(bicResults.keys()), per["bic"][i, 0:4], label=percentiles[i])
+        kfoldplots.plot(list(kfoldResults.keys()), per["kfold"][i, 0:4], label=percentiles[i])
+
+    kfoldplots.legend(loc='right')
+    bicplots.legend(loc='right')
     
     plt.show()
 plot()

@@ -276,32 +276,4 @@ def plotTrained():
     plt.show()
 
 
-# compare them all
-#compare.bar(positions + i*width, np.asarray(ms[list(ms.keys())[i]]['perr']), width, color=colors[i])
-
-def plotModelOrder():
-    # use model stats to compare them
-    # number of perceptrons vs score
-    modelOrderFig = plt.figure()
-    compare = modelOrderFig.add_subplot()
-    # where each bar is on the graph
-    width = 0.1
-    colors = 'rgbmck'
-    for i in range(len(ms.keys())):
-        positions = [
-                -0.25 + i * width,
-                0.75 + i * width,
-                1.75 + i * width,
-                2.75 + i * width,
-                3.75 + i * width
-                ]
-        compare.bar(positions, np.asarray(ms[list(ms.keys())[i]]['perr']), width, color=colors[i], label=list(ms.keys())[i])
-
-    compare.set_title("Number of Perceptrons vs P(error)")
-    compare.set_xticklabels([0, 1, 2, 3, 4, 5])
-    compare.set_xlabel("Number of Perceptrons")
-    compare.set_ylabel("P(error)")
-    compare.legend(loc='best')
-    plt.show()
-
-plotModelOrder()
+plotTrained()
