@@ -2,8 +2,9 @@ import numpy as np
 from tensorflow import keras
 import keras.preprocessing.image as image
 from sklearn.preprocessing import normalize
+import matplotlib.pyplot as plt
 
-def img_to5d(path):
+def imgTo5d(path):
     """
     generate 5-D vector for pixels
       row
@@ -32,11 +33,24 @@ def img_to5d(path):
                     ]
             )
             i += 1
-    return normalize(ret, axis=1, norm='max')
+    return normalize(ret, axis=1, norm='max'), img.width, img.height
 
-bird = img_to5d("42049_color.jpg")
-plane = img_to5d("3096_color.jpg")
+def NcompGMM(C, arr):
+    """
+    Fit a two component GMM on the given image array
+    C is the number of components
+    """
+    pass
 
+def arrToImg(arr, x, y):
+    """display an image array"""
+    new = arr[:, 2:].reshape(y,x,3)
+    fig = plt.figure()
+    plot = fig.add_subplot()
+    plot.imshow(new)
+
+bird, bx, by = imgTo5d("42049_color.jpg")
+plane, px, py = imgTo5d("3096_color.jpg")
 
 # fit 2 component gmm using ml param estimation
 
